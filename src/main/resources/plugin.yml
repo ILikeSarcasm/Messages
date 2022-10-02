@@ -1,0 +1,4 @@
+name: Messages
+version: '${project.version}'
+main: me.ilikesarcasm.messages.Messages
+api-version: 1.19
