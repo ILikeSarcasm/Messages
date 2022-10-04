@@ -33,14 +33,12 @@ public class LanguageManager {
     }
 
     /**
-     * Returns the message associated with the given key.
+     * Returns the message or the structure associated with the given key.
      * @param key the key to get the message associated with
-     * @return the associated message or null if key is not a final path
+     * @return the associated message or structure
      */
-    public String getFromKey(String key) {
-        Object message = this.messages.get(key);
-
-        return message instanceof String ? (String) message : null;
+    public Object getFromKey(String key) {
+        return this.messages.get(key);
     }
 
     /**
