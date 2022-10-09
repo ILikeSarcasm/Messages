@@ -1,4 +1,4 @@
-package me.ilikesarcasm.messages;
+package io.github.ilikesarcasm.messages;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;

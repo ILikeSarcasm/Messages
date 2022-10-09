@@ -1,4 +1,4 @@
-package me.ilikesarcasm.messages;
+package io.github.ilikesarcasm.messages;
 
 import org.bukkit.configuration.file.YamlConfiguration;
 
