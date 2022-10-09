@@ -3,6 +3,7 @@ package me.ilikesarcasm.messages;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
+import java.io.Reader;
 import java.util.Map;
 
 public class LanguageManager {
@@ -49,6 +50,17 @@ public class LanguageManager {
     public void loadLanguage(String language, File languageFile) {
         this.name = language;
         YamlConfiguration languageConfig = YamlConfiguration.loadConfiguration(languageFile);
+        this.messages = languageConfig.getValues(true);
+    }
+
+    /**
+     * Load messages from a language file. The language file must exists.
+     * @param language       The language name
+     * @param languageReader The reader to load the messages from
+     */
+    public void loadLanguage(String language, Reader languageReader) {
+        this.name = language;
+        YamlConfiguration languageConfig = YamlConfiguration.loadConfiguration(languageReader);
         this.messages = languageConfig.getValues(true);
     }
 
