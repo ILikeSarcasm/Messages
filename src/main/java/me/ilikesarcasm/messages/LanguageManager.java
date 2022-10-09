@@ -2,8 +2,7 @@ package me.ilikesarcasm.messages;
 
 import org.bukkit.configuration.file.YamlConfiguration;
 
-import java.io.File;
-import java.io.Reader;
+import java.io.*;
 import java.util.Map;
 
 public class LanguageManager {
@@ -55,11 +54,16 @@ public class LanguageManager {
 
     /**
      * Load messages from a language file. The language file must exists.
-     * @param language       The language name
-     * @param languageReader The reader to load the messages from
+     * @param language    The language name
+     * @param classLoader The class loader of the plugin
      */
-    public void loadLanguage(String language, Reader languageReader) {
+    public void loadLanguage(String language, ClassLoader classLoader) throws FileNotFoundException {
         this.name = language;
+        InputStream inputStream = classLoader.getResourceAsStream("lang/en.yml");
+        if (inputStream == null) {
+            throw new FileNotFoundException("Couldn't find " + "lang/en.yml");
+        }
+        InputStreamReader languageReader = new InputStreamReader(inputStream);
         YamlConfiguration languageConfig = YamlConfiguration.loadConfiguration(languageReader);
         this.messages = languageConfig.getValues(true);
     }
