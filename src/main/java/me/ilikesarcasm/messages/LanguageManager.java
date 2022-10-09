@@ -2,10 +2,21 @@ package me.ilikesarcasm.messages;
 
 import org.bukkit.configuration.file.YamlConfiguration;
 
+import javax.management.openmbean.InvalidKeyException;
 import java.io.*;
+import java.util.HashMap;
 import java.util.Map;
 
 public class LanguageManager {
+
+    private static final String LANGUAGE_FOLDER = "lang";
+    private static final HashMap<String, String> LANGUAGES_TO_FILE = new HashMap<String, String>() {{
+        put("English", "en.yml");
+        put("French", "fr.yml");
+        put("German", "de.yml");
+        put("Spanish", "es.yml");
+        put("Italian", "it.yml");
+    }};
 
     private static LanguageManager instance;
 
@@ -56,12 +67,18 @@ public class LanguageManager {
      * Load messages from a language file. The language file must exists.
      * @param language    The language name
      * @param classLoader The class loader of the plugin
+     * @throws InvalidKeyException   when the language is not handled in LANGUAGES_TO_FILE
+     * @throws FileNotFoundException when the language file can not be open
      */
-    public void loadLanguage(String language, ClassLoader classLoader) throws FileNotFoundException {
+    public void loadLanguage(String language, ClassLoader classLoader) throws InvalidKeyException, FileNotFoundException {
         this.name = language;
-        InputStream inputStream = classLoader.getResourceAsStream("lang/en.yml");
+        if (!LanguageManager.LANGUAGES_TO_FILE.containsKey(language)) {
+            throw new InvalidKeyException("Unknown language: " + language);
+        }
+        String languageFile = LanguageManager.LANGUAGE_FOLDER + File.separator + LanguageManager.LANGUAGES_TO_FILE.get(language);
+        InputStream inputStream = classLoader.getResourceAsStream(languageFile);
         if (inputStream == null) {
-            throw new FileNotFoundException("Couldn't find " + "lang/en.yml");
+            throw new FileNotFoundException("Couldn't find " + languageFile);
         }
         InputStreamReader languageReader = new InputStreamReader(inputStream);
         YamlConfiguration languageConfig = YamlConfiguration.loadConfiguration(languageReader);
