@@ -41,7 +41,8 @@ public class Message {
     /**
      * Creates a Message representing the message associated with the given key in the LanguageManager.
      * @param key the key to get the message associated with
-     * @return a new Message instance or null if key is not a final path
+     * @param params  the values to parametrize the message
+     * @return a new Message instance or null if key is not found
      */
     public static Message fromKey(String key, Object... params) {
         Object message = Message.languageManager.getFromKey(key);
@@ -52,18 +53,11 @@ public class Message {
     /**
      * Creates a Message representing the given message.
      * @param message the message to represent
+     * @param params  the values to parametrize the message
      * @return a new Message instance
      */
     public static Message fromMessage(String message, Object... params) {
         return new Message(message, params);
-    }
-
-    /**
-     * Sends the message to a player.
-     * @param target the player to send the message to
-     */
-    public void sendTo(Player target) {
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tellraw " + target.getName() + " " + this.message);
     }
 
     /**
@@ -94,6 +88,14 @@ public class Message {
     }
 
     /**
+     * Sends the message to a player.
+     * @param target the player to send the message to
+     */
+    public void sendTo(Player target) {
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tellraw " + target.getName() + " " + this.message);
+    }
+
+    /**
      * Sends the message to a CommandSender. Redirects to sendTo(Player) if target is an instance of Player.
      * @param target the user to send the message to
      */
@@ -106,6 +108,13 @@ public class Message {
         } else {
             target.sendMessage(this.toRaw());
         }
+    }
+
+    /**
+     * Sends the message to every players.
+     */
+    public void sendToAll() {
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tellraw @a " + this.message);
     }
 
 }
