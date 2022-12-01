@@ -2,18 +2,24 @@ package io.github.ilikesarcasm.messages;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.MemorySection;
 import org.bukkit.entity.Player;
-import org.json.simple.JSONObject;
 
 import java.text.MessageFormat;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Set;
+
+import javax.json.Json;
+import javax.json.JsonArrayBuilder;
+import javax.json.JsonObject;
+import javax.json.JsonObjectBuilder;
 
 public class Message {
 
     private static LanguageManager languageManager;
 
-    private final ArrayList<HashMap<String, String>> message;
+    private final JsonObject message;
 
     /**
      * Sets the used LanguageManager.
@@ -26,21 +32,131 @@ public class Message {
     /**
      * Constructor.
      * @param message the message this Message instance represents
+     * @param params  the values to parametrize the message
      */
     private Message(Object message, Object... params) {
-        this.message = new ArrayList<>();
+        JsonObjectBuilder messageBuilder = Json.createObjectBuilder().add("text", "");
+        JsonArrayBuilder extraBuilder = Json.createArrayBuilder();
+        
+        switch (message.getClass().getSimpleName()) {
+            case "ArrayList":
+                ArrayList<String> lines = (ArrayList<String>)message;
+                for (int i = 0; i < lines.size(); i++) {
+                    boolean newLine = i > 0;
+                    this.processLine(lines.get(i), params, extraBuilder, newLine);
+                }
+                break;
 
-        if (message instanceof String) {
-            this.message.add(new HashMap<>());
-            this.message.get(0).put("text", MessageFormat.format((String) message, params));
-        } else {
-            System.out.println(message);
+            case "MemorySection":
+                Set<String> keys = ((MemorySection)message).getKeys(false);
+                if (keys.contains("text")) {
+                    this.processLine(message, params, extraBuilder);
+                } else {
+                    boolean newLine = false;
+                    Iterator<String> it = keys.iterator();
+                    while (it.hasNext()) {
+                        String key = it.next();
+                        if (key.startsWith("line")) {
+                            Object line = ((MemorySection)message).get(key);
+                            this.processLine(line, params, extraBuilder, newLine);
+                            newLine = true;
+                        }
+                    }
+                    this.processOptions((MemorySection)message, params, messageBuilder);
+                }
+                break;
+
+            case "String":
+                this.processLine(message, params, extraBuilder);
+                break;
+        }
+            
+        this.message = messageBuilder.add("extra", extraBuilder.build()).build();
+    }
+
+    /**
+     * Add line to a JsonArrayBuilder
+     * @param line    the YAML representation of the line
+     * @param params  the values to parametrize the line
+     * @param newLine truth value for adding a new line at the start of this line
+     */
+    private void processLine(Object line, Object[] params, JsonArrayBuilder builder, boolean newLine) {
+        JsonObjectBuilder lineBuilder = Json.createObjectBuilder();
+        
+        switch (line.getClass().getSimpleName()) {
+            case "String":
+            lineBuilder.add("text", (newLine ? "\n" : "") + new MessageFormat((String)line).format(params));
+                break;
+
+            case "MemorySection":
+                this.processOptions((MemorySection)line, params, lineBuilder, newLine);
+                break;
+        }
+
+        builder.add(lineBuilder.build());
+    }
+
+    /**
+     * Add line to a JsonArrayBuilder
+     * @param line    the YAML representation of the line
+     * @param params  the values to parametrize the line
+     */
+    private void processLine(Object line, Object[] params, JsonArrayBuilder builder) {
+        this.processLine(line, params, builder, false);
+    }
+
+    /**
+     * Add options to a JsonObjectBuilder.
+     * @param options the options to add to the builder
+     * @param params  the values to parametrize the options
+     * @param builder the builder to add the options to
+     * @param newLine truth value for adding a new line at the start of this line
+     */
+    private void processOptions(MemorySection options, Object[] params, JsonObjectBuilder builder, boolean newLine) {
+        Set<String> keys = options.getKeys(false);
+
+        for (String key: keys) {
+            if (!(options.get(key) instanceof String)) {
+                continue;
+            }
+
+            String value = new MessageFormat((String)(options.get(key))).format(params);
+
+            switch (key) {
+                case "text":
+                    builder.add("text", (newLine ? "\n" : "") + value);
+                    break;
+
+                case "hover":
+                    builder.add("hoverEvent", Json.createObjectBuilder()
+                                                  .add("action", "show_text")
+                                                  .add("value", value)
+                                                  .build());
+                    break;
+
+                case "click":
+                    builder.add("clickEvent", Json.createObjectBuilder()
+                                                  .add("action", "run_command")
+                                                  .add("value", value)
+                                                  .build());
+                    break;
+            }
         }
     }
 
     /**
+     * Add options to a JsonObjectBuilder.
+     * @param options the options to add to the builder
+     * @param params  the values to parametrize the options
+     * @param builder the builder to add the options to
+     */
+    private void processOptions(MemorySection options, Object[] params, JsonObjectBuilder builder) {
+        this.processOptions(options, params, builder, false);
+    }
+
+    /**
      * Creates a Message representing the message associated with the given key in the LanguageManager.
-     * @param key the key to get the message associated with
+     * @param key     the key to get the message associated with
      * @param params  the values to parametrize the message
      * @return a new Message instance or null if key is not found
      */
@@ -61,30 +177,13 @@ public class Message {
     }
 
     /**
-     * Returns the raw parametrized message
-     * @return the message
+     * Extract the text part of the message
+     * @return the text part of the message
      */
     public String toRaw() {
-        StringBuilder message = new StringBuilder();
-        for (HashMap<String, String> line : this.message) {
-            message.append(line.get("text")).append("\n");
-        }
-
-        return message.toString();
-    }
-
-    /**
-     * Returns the parametrized message with optional hover and click event
-     * as a JSON string to use with the tellraw command
-     * @return JSON string of the message
-     */
-    public ArrayList<String> toJson() {
-        ArrayList<String> message = new ArrayList<>();
-        for (HashMap<String, String> line : this.message) {
-            message.add(new JSONObject(line).toJSONString());
-        }
-
-        return message;
+        return this.message.getJsonArray("extra").stream().map(
+            line -> line.asJsonObject().getString("text")
+        ).toString();
     }
 
     /**
@@ -92,7 +191,7 @@ public class Message {
      * @param target the player to send the message to
      */
     public void sendTo(Player target) {
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tellraw " + target.getName() + " " + this.message);
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tellraw " + target.getName() + " " + this.message.toString());
     }
 
     /**
@@ -101,10 +200,7 @@ public class Message {
      */
     public void sendTo(CommandSender target) {
         if (target instanceof Player) {
-            ArrayList<String> message = this.toJson();
-            for (String line : message) {
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tellraw " + target.getName() + " " + line);
-            }
+            this.sendTo((Player)target);
         } else {
             target.sendMessage(this.toRaw());
         }
