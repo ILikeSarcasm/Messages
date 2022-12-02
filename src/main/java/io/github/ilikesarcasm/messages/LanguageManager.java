@@ -41,7 +41,6 @@ public class LanguageManager {
     public void loadLanguage(File languageFile) {
         YamlConfiguration languageConfig = YamlConfiguration.loadConfiguration(languageFile);
         this.messages = languageConfig.getValues(true);
-        System.out.println(languageConfig.get("test.test").getClass());
     }
 
 }
